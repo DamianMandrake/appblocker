@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">AppBlocker</string>
+    <string name="blocked">This app has been blocked</string>
+    <string name="profileNameHint">Enter profile name here</string>
+    <string name="killTheApp">Kill the app</string>
+</resources>
