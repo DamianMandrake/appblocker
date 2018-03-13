@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.creeps.appkiller.R;
+import com.creeps.appkiller.core.services.model.Profile;
 import com.creeps.appkiller.core.services.model.ProfilePackages;
 
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ public class ProfileAdapterInnerAppListAdapter extends RecyclerView.Adapter<Prof
         this.drawable=context.getDrawable(R.mipmap.ic_launcher);
 
     }
+    public void setProfilePackages(ArrayList<ProfilePackages> list){this.profilePackages=list;this.notifyDataSetChanged();}
     @Override
     public ProfileAdapterInnerAppListAdapterViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view=inflater.inflate(R.layout.app_list_item_inner_recycler_item,parent,false);

@@ -3,4 +3,7 @@
     <string name="blocked">This app has been blocked</string>
     <string name="profileNameHint">Enter profile name here</string>
     <string name="killTheApp">Kill the app</string>
+    <string name="start_time">Start Time:</string>
+    <string name="end_time">End Time:</string>
+    <string name="confirm_changes">confirm Changes</string>
 </resources>

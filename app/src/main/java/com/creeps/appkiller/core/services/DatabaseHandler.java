@@ -5,12 +5,15 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.support.v4.database.DatabaseUtilsCompat;
 import android.util.Log;
 
 import com.creeps.appkiller.core.services.model.Profile;
 import com.creeps.appkiller.core.services.model.ProfilePackages;
+import com.creeps.appkiller.core.services.model.Week;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 
 /**
  * Created by rohan on 3/3/18.
@@ -20,15 +23,22 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 
     private final static String TAG="DatabaseHandler";
     private final static String DATABASE_NAME="appblocker";
-    private final static int DATABASE_VERSION=3;
+    private final static int DATABASE_VERSION=4;
+
+
+
     private final static String TABLE_PROFILES="profiles";
     private final static String TABLE_PKG="pkgs";
+    private final static String TABLE_DAYS="days_active";
+
+
+
+
     private final static String GET_ALL="SELECT * FROM ";
     private final static String CREATE_PROFILES_TABLE="CREATE TABLE "+TABLE_PROFILES+" ("+ Profile.ID_KEY+" INTEGER PRIMARY KEY AUTOINCREMENT , "+Profile.PNAME_KEY
-            +" TEXT , "+Profile.ST_KEY+" TEXT , "+Profile.ET_KEY+" TEXT, "+Profile.ACTIVE_KEY+" INTEGER )";
+            +" TEXT , "+Profile.ST_KEY+" INTEGER , "+Profile.ET_KEY+" INTEGER, "+Profile.ACTIVE_KEY+" INTEGER ,"+Profile.DAYS_BITMASK_KEY+" INTEGER)";
     private final static String CREATE_PROFILE_PACKAGE="CREATE TABLE "+TABLE_PKG+" ("+ ProfilePackages.PACKAGE_ID+" INTEGER PRIMARY KEY AUTOINCREMENT, "+
-            ProfilePackages.PACKAGE_PROFILE_ID+" INTEGER , "+ProfilePackages.PACKAGE_NAME+" TEXT,"+ProfilePackages.PACKAGE_OPEN_COUNT+" INTEGER)";
-
+            ProfilePackages.PACKAGE_PROFILE_ID+" INTEGER , "+ProfilePackages.PACKAGE_NAME+" TEXT ,"+ProfilePackages.PACKAGE_OPEN_COUNT+" INTEGER );";
 
     private static DatabaseHandler ref;
     /* TODO add a predefined profile to the database */
@@ -67,12 +77,13 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 
     }
     /* inserts a profile in the database. returns the id of the inserted profile*/
-    public synchronized long addProfile(String profileName,long startTime,long endTime){
+    public synchronized long addProfile(String profileName,long startTime,long endTime,byte daysToConsider){
         SQLiteDatabase database=this.getWritableDatabase();
         ContentValues values=new ContentValues();
         values.put(Profile.PNAME_KEY,profileName);
         values.put(Profile.ST_KEY,startTime);
         values.put(Profile.ET_KEY,endTime);
+        values.put(Profile.DAYS_BITMASK_KEY,daysToConsider);
         long id=database.insert(TABLE_PROFILES,null,values);
         database.close();
         return id;
@@ -89,7 +100,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 long startTime=cursor.getLong(2);
                 long endTime=cursor.getLong(3);
                 int ia=cursor.getInt(4);
-                profiles.add(new Profile(id,startTime,endTime,profileName,ia));
+                Week week=new Week((byte)cursor.getInt(5));
+                profiles.add(new Profile(id,startTime,endTime,profileName,ia,week));
             }while (cursor.moveToNext());
 
         }
@@ -99,10 +111,10 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     /* adds a list of ProfilePackages to the database*/
     public synchronized void addPackagesToProfile(long packageId,ArrayList<String> packageName){
         SQLiteDatabase database=this.getWritableDatabase();
-        String query="INSERT INTO "+TABLE_PKG+" ("+ProfilePackages.PACKAGE_PROFILE_ID+","+ProfilePackages.PACKAGE_NAME+") VALUES ";
+        String query="INSERT INTO "+TABLE_PKG+" ("+ProfilePackages.PACKAGE_PROFILE_ID+","+ProfilePackages.PACKAGE_NAME+","+ProfilePackages.PACKAGE_OPEN_COUNT+") VALUES ";
         StringBuilder stringBuilder=new StringBuilder(query);
         for(String pk:packageName)
-            stringBuilder.append("("+packageId+",\""+pk+"\"),");
+            stringBuilder.append("("+packageId+",\""+pk+"\",0),");
 
         stringBuilder.delete(stringBuilder.length()-1,stringBuilder.length());
         Log.d(TAG,stringBuilder.toString());
@@ -152,12 +164,13 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 long startTime = cursor.getLong(2);
                 long endTime = cursor.getLong(3);
                 int ia = cursor.getInt(4);
-                pr=new Profile(id, startTime, endTime, profileName, ia);
+                Week week=new Week((byte)cursor.getInt(5));
+                pr=new Profile(id, startTime, endTime, profileName, ia,week);
             }
         }catch (Exception npe){
             npe.printStackTrace();
         }finally {
-
+            database.close();
             return pr;
         }
     }
@@ -172,18 +185,74 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         database.execSQL(query2);
         if(this.activeCallback!=null)
             this.activeCallback.profileNotify();
+        database.close();
     }
-    public void setStatus(int profileId,int status){
+    public synchronized void setStatus(int profileId,int status){
         SQLiteDatabase database=this.getWritableDatabase();
         String query2="UPDATE "+TABLE_PROFILES+" SET "+Profile.ACTIVE_KEY+" = "+status+" WHERE "+Profile.ID_KEY+" = "+profileId;
+        if(status==0){
+            String query="UPDATE "+TABLE_PKG+" SET "+ProfilePackages.PACKAGE_OPEN_COUNT+" = 0 WHERE "+ProfilePackages.PACKAGE_PROFILE_ID+"= "+profileId;
+            database.execSQL(query);
+        }
         database.execSQL(query2);
+        database.close();
     }
 
-    public void updateOpenCount(ProfilePackages profilePackages){
-        profilePackages.getId();
+    public synchronized int getOpenCount(int packageId){
+        String query="SELECT "+ProfilePackages.PACKAGE_OPEN_COUNT+" FROM "+TABLE_PKG+" WHERE "+ProfilePackages.PACKAGE_ID+"="+packageId;
+        SQLiteDatabase database=this.getWritableDatabase();
+        Cursor cursor=database.rawQuery(query,null);
+        int val=-1;
+        try {
+            if (cursor.moveToFirst()) {
+                val= (cursor.getInt(0));
+                return val;
+            }
+        }catch (Exception npe){
+            npe.printStackTrace();
+        }finally {
+            database.close();
+            return val;
+        }
+
+    }
+    /* returns the open count of the currentPackage */
+    public synchronized int incrementOpenCount(int profileId,String packageName){
+
+        this.logTABLECOLS(TABLE_PKG);
+        String query="UPDATE "+TABLE_PKG+" SET "+ProfilePackages.PACKAGE_OPEN_COUNT+" = "+ProfilePackages.PACKAGE_OPEN_COUNT+" + 1 WHERE "+ProfilePackages.PACKAGE_PROFILE_ID+
+                " = "+profileId+" AND "+ProfilePackages.PACKAGE_NAME+" = \'"+packageName+"\';";
+        SQLiteDatabase database=this.getWritableDatabase();
+        database.execSQL(query);
+
+        //extremely bad
+        query="SELECT "+ProfilePackages.PACKAGE_OPEN_COUNT+" FROM "+TABLE_PKG+" WHERE "+ProfilePackages.PACKAGE_PROFILE_ID+
+                " = "+profileId+" AND "+ProfilePackages.PACKAGE_NAME+" = \'"+packageName+"\';";
+        Cursor cursor=database.rawQuery(query,null);
+        int val=-1;
+        try {
+            if (cursor.moveToFirst()) {
+                val= (cursor.getInt(0));
+                return val;
+            }
+        }catch (Exception npe){
+            npe.printStackTrace();
+        }finally {
+            database.close();
+            return val;
+        }
 
     }
 
+    private void logTABLECOLS(String tableName){
+        SQLiteDatabase mDataBase = getReadableDatabase();
+        Cursor dbCursor = mDataBase.query(tableName, null, null, null, null, null, null);
+        String[] columnNames = dbCursor.getColumnNames();
+        StringBuilder sb=new StringBuilder();
+        for(String col: columnNames)
+            sb.append(col+" ");
+        Log.d(TAG,sb.toString());
+    }
 
 
     public void notifyNoneActive(){
@@ -191,9 +260,27 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     }
 
 
+    public synchronized void updateDays(int profileId,byte days){
+        String query1="UPDATE "+TABLE_PROFILES+" SET "+Profile.DAYS_BITMASK_KEY+" = "+days+" WHERE "+Profile.ID_KEY+" = "+profileId;
+        SQLiteDatabase database=getWritableDatabase();
+        database.execSQL(query1);
+        database.close();
+    }
 
+    public synchronized void updateProfilePackages(int profileId,ArrayList<String> packageNames){
+        SQLiteDatabase database=getWritableDatabase();
+        String query="DELETE FROM "+TABLE_PKG+" WHERE "+ProfilePackages.PACKAGE_PROFILE_ID+" = "+profileId ;
+        database.execSQL(query);
+        database.close();
+        this.addPackagesToProfile(profileId,packageNames);
+    }
 
-
-
+    public synchronized void updateTime(int profileId,String which,long time){
+        String query="UPDATE "+TABLE_PROFILES+" SET "+which+" = "+time+ " WHERE "+Profile.ID_KEY+" = "+profileId;
+        SQLiteDatabase database=getWritableDatabase();
+        database.execSQL(query);
+        database.close();
+        this.notifyNoneActive();
+    }
 
 }

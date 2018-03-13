@@ -1,5 +1,7 @@
 package com.creeps.appkiller.core.services.model;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -17,26 +19,30 @@ public class Profile {
     public final static String ST_KEY="start_time";
     public final static String ET_KEY="end_time";
     public final static String ACTIVE_KEY="currently_active";
+    public final static String DAYS_BITMASK_KEY="days_active";
+    private final static String TAG="Profile";
     private int id;
-    private Date startTime,endTime;
+    private long startTime,endTime;
     private String profileName;
     private int isActive=0;
     //could use a HashMap of packageName to ProfilePackages for o(1) retrievals.
     private ArrayList<ProfilePackages> packages;
-    public Profile(int id,long startTime,long endTime,String profileName,int isActive){
+    private Week daysActive;
+    public Profile(int id,long startTime,long endTime,String profileName,int isActive,Week week){
         this.id=id;
-        this.startTime=new Date(startTime);this.endTime=new Date(endTime);
+        this.startTime=startTime;this.endTime=endTime;
         this.profileName=profileName;
         this.isActive=isActive;
+        this.daysActive=week;
     }
     public String getProfileName(){return this.profileName;}
     public int getId(){return this.id;}
 
-    public Date getStartTime() {
+    public long getStartTime() {
         return startTime;
     }
 
-    public Date getEndTime() {
+    public long getEndTime() {
         return endTime;
     }
     public void setPackages(ArrayList<ProfilePackages> packages){
@@ -57,12 +63,21 @@ public class Profile {
         }
         return false;
     }
+
+
+    public void setStartTime(long s){this.startTime=s;}
+    public void setEndTime(long s){this.endTime=s;}
     @Override
     public String toString(){
         return this.id+" "+this.profileName+" active: "+this.isActive;
     }
     public void setIsActive(int a){this.isActive=a;}
     public int getIsActive(){return this.isActive;}
+    public Week getDaysActive(){return this.daysActive;}
+    //checks time and determines whether the apps must be blocked
+    public boolean shouldBlock(long time){
+        Log.d(TAG,this.startTime+" s "+this.endTime+ " e "+time+" c");
+        return time>=this.startTime && time<this.endTime; }
 
 
 }

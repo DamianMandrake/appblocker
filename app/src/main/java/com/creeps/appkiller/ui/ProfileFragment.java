@@ -12,6 +12,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.creeps.appkiller.MainActivity;
 import com.creeps.appkiller.R;
 import com.creeps.appkiller.core.services.DatabaseHandler;
 import com.creeps.appkiller.core.services.model.Profile;
@@ -24,13 +25,19 @@ import java.util.List;
  * A fragment that show a list of profiles. If none exist lets the user create a new one.
  */
 
-public class ProfileFragment extends Fragment implements ProfileAdapter.ProfileAdapterCallback{
+public class ProfileFragment extends Fragment implements ProfileAdapter.ProfileAdapterCallback,ProfileDetailsFragment.ProfileDetailsFragmentCallback{
 
     private RecyclerView mRecycler;
     private ProfileAdapter profileAdapter;
     private DatabaseHandler ref;
     private ArrayList<Profile> profiles;
     private final static String TAG="ProfileFragment";
+    public static MainActivity mainActivity;
+    public static ProfileFragment getInstance(MainActivity mainActivity){
+        ProfileFragment fragment=new ProfileFragment();
+        ProfileFragment.mainActivity=mainActivity;
+        return fragment;
+    }
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -54,8 +61,13 @@ public class ProfileFragment extends Fragment implements ProfileAdapter.ProfileA
     public void onClick(int position){
         Log.d(TAG,position+"");
         /* Todo open a fragment dialog with the apps present in the given Profile*/
+        Log.d(TAG,"here");
         Profile current=this.profiles.get(position);
-
+        ProfileDetailsFragment f=ProfileDetailsFragment.getInstance(current, mainActivity,this);
+        Bundle bundle=new Bundle();
+        bundle.putInt("id",current.getId());
+        f.setArguments(bundle);
+        mainActivity.placeFragment(f,true);
     }
     @Override
     public void forceRepaint(){
@@ -65,10 +77,15 @@ public class ProfileFragment extends Fragment implements ProfileAdapter.ProfileA
 
 
 
+    /* Overriding popup callbacks*/
 
+    @Override
+    public void onSuccess(Profile profile) {
+        //todo insert in the database
+    }
 
-
-
-
-
+    @Override
+    public void onDelete(Profile profile) {
+        //todo delete from the database
+    }
 }

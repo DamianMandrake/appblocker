@@ -36,7 +36,7 @@ public class NotificationHandler {
 
         this.builder.setOngoing(true);
         this.builder.setContentIntent(pendingIntent);
-        this.builder.setContentTitle(mContext.getString(R.string.app_name)).setSmallIcon(R.drawable.ic_bookmark_black_24dp);
+        this.builder.setContentTitle(mContext.getString(R.string.app_name)).setSmallIcon(R.drawable.ic_check_circle_pink_600_24dp);
 
     }
     public void buildNotification(){

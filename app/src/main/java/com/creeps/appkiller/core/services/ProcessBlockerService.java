@@ -18,7 +18,9 @@ import com.creeps.appkiller.core.services.model.Profile;
 import com.creeps.appkiller.core.services.thread.ProcessLister;
 import com.creeps.appkiller.core.services.thread.ProcessListerCallback;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Scanner;
 
@@ -31,10 +33,12 @@ public class ProcessBlockerService extends Service implements ProcessListerCallb
     private final static String THREAD_NAME="ProcessHandler";
     private final IBinder mBinder= new LocalBinder();
     public final static String BLACKLIST_APP="blacklistedApp";
+    public final static String CURRENT_PROFILE_ID="currentprofile";
     private Profile currentlyActiveProfile;
     private static final String TAG="ProcessBlockerService";
     private Notification currentNotifcationReference;
     private final static int NOTIFICATION_ID=2222;
+    private Calendar calendar;
 
     /* Will hold a reference to a Profile and check its contents for the currently running app.*/
     private static List<String> mBlackList;
@@ -42,7 +46,7 @@ public class ProcessBlockerService extends Service implements ProcessListerCallb
     public int onStartCommand(Intent intent, int flags, int startId) {
 
 
-
+        this.calendar=Calendar.getInstance();
         ProcessLister processLister=ProcessLister.prepareInstance(this.getApplicationContext(),THREAD_NAME);
         processLister.setProcessListerCallback(this);
         if (processLister.getState() == Thread.State.NEW){
@@ -105,11 +109,14 @@ public class ProcessBlockerService extends Service implements ProcessListerCallb
 
         Log.d(TAG,"received "+currentPackageName);
         if(currentlyActiveProfile!=null)            Log.d(TAG,"PROFILE "+currentlyActiveProfile.toString());
-
-        if(currentlyActiveProfile!=null && currentlyActiveProfile.contains(currentPackageName)){
+        calendar=Calendar.getInstance();
+        long currentTime= calendar.get(Calendar.HOUR_OF_DAY) *3600 + calendar.get(Calendar.MINUTE)*60;
+        if(currentlyActiveProfile!=null && currentlyActiveProfile.contains(currentPackageName) && currentlyActiveProfile.shouldBlock(currentTime)){
             Intent blockeActivityIntent=new Intent(this, BlockedAppActivity.class);
                     blockeActivityIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
             blockeActivityIntent.putExtra(BLACKLIST_APP,currentPackageName);
+            blockeActivityIntent.putExtra(CURRENT_PROFILE_ID,currentlyActiveProfile.getId());
             startActivity(blockeActivityIntent);
         }
     }

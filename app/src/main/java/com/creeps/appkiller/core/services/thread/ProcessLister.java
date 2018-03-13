@@ -4,6 +4,7 @@ import android.app.ActivityManager;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
@@ -27,8 +28,9 @@ public class ProcessLister extends HandlerThread implements Handler.Callback,Pro
     private Runnable mRunnable;
     private Handler mHandler;
     private ProcessListerCallback processListerCallback;
-
+    private final static long HOURS_TO_CONSIDER=1000 * 3600*24;
     private static ProcessLister mProcessLister;
+    private static ArrayList<UsageStats> oldStats;
 
     private final static String TAG="ProcessListerThread";
     private ProcessLister(String name, final Context context){
@@ -89,33 +91,37 @@ public class ProcessLister extends HandlerThread implements Handler.Callback,Pro
     /* This function is to be called whenever you need the package list or when you want to know which app is currently running
             * @param getList - if set returns the list only. Other wise returns a SortedTree
             * @param Context - to obtain the system Service*/
-    public static Object getUsageAccessData(Context context,boolean getList){
+    public static Object getUsageAccessData(Context context,boolean getList) {
         String x;
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
             UsageStatsManager usageStatsManager = (UsageStatsManager) context.getSystemService(USAGE_STATS_SERVICE);
             long time = System.currentTimeMillis();
 
-            ArrayList<UsageStats> stats=null;
+            ArrayList<UsageStats> stats = null;
             try {
                 //the following line of code leads to classCastException whenever youre multitasking
-                 stats= (ArrayList<UsageStats>) usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, time - 1000 * 10, time);
-                if (getList) return stats;
+                stats = (ArrayList<UsageStats>) usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, time - HOURS_TO_CONSIDER, time);
+                if(stats!=null) {
+                    Log.d(TAG, stats.toString());
+                    oldStats=stats;
+                }
+                if (getList) return oldStats;
 
-                if(stats!=null){
-                SortedMap<Long, UsageStats> map=new TreeMap<>();
-                for(UsageStats usageStats:stats){
-                    map.put(usageStats.getLastTimeUsed(),usageStats);
+                if (stats != null) {
+                    SortedMap<Long, UsageStats> map = new TreeMap<>();
+                    for (UsageStats usageStats : stats) {
+                        map.put(usageStats.getLastTimeUsed(), usageStats);
+
+                    }
+                    if (!map.isEmpty()) {
+                        x = map.get(map.lastKey()).getPackageName();
+                        Log.d(TAG, "current " + x);
+                    }
+                    return map;
 
                 }
-                if(!map.isEmpty()){
-                    x=map.get(map.lastKey()).getPackageName();
-                    Log.d(TAG,"current "+x);
-                }
-                return map;
-
-            }
-            }catch (ClassCastException c){
-                Log.d(TAG,"couldnt return any value prolly because youre multitasking");
+            } catch (ClassCastException c) {
+                Log.d(TAG, "couldnt return any value prolly because youre multitasking");
                 return null;
             }
         }

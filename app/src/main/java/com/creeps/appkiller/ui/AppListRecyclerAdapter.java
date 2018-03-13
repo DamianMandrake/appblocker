@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,6 +16,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.creeps.appkiller.R;
+import com.creeps.appkiller.core.services.model.ProfilePackages;
 
 import org.w3c.dom.Text;
 
@@ -28,7 +30,6 @@ import java.util.List;
  */
 
 public class AppListRecyclerAdapter extends RecyclerView.Adapter<AppListRecyclerAdapter.AppListRecyclerViewHolder>{
-    private boolean shouldMaintainStates;
     private ArrayList<UsageStats> appsList;
     private LayoutInflater layoutInflater;
     private AppListRecyclerViewHolder previous;
@@ -36,14 +37,33 @@ public class AppListRecyclerAdapter extends RecyclerView.Adapter<AppListRecycler
     private Drawable drawable;
     private boolean arr[];
     private HashMap<Integer,String> selectedRef;
-    public AppListRecyclerAdapter(Context context, ArrayList<UsageStats> appsList){
-        this.shouldMaintainStates=shouldMaintainStates;
+    private ArrayList<ProfilePackages> preexisting;
+    private ArrayList<Integer> indices;
+    private final static String TAG="ApplistAdapter";
+    public AppListRecyclerAdapter(Context context, ArrayList<UsageStats> appsList, ArrayList<ProfilePackages> preexisting){
         this.appsList=appsList;
         this.layoutInflater=LayoutInflater.from(context);
         this.packageManager=context.getPackageManager();
         this.drawable=context.getDrawable(R.mipmap.ic_launcher);
         this.selectedRef=new HashMap<>();
+        this.preexisting=preexisting;
         this.arr=new boolean[appsList.size()];
+        if(preexisting!=null)
+            this.handleBooleans();
+    }
+    private void handleBooleans(){
+        this.indices=new ArrayList<>();
+        for(ProfilePackages p:preexisting){
+            int i;
+            for( i=0;i<appsList.size() && !appsList.get(i).getPackageName().equals(p.getPackageName());i++);
+            if(i<appsList.size() ) {//found a recurring entry
+                this.arr[i] = true;
+                Log.d(TAG,i+" recurred");
+                this.indices.add(i);
+                //adding to selected
+                this.selectedRef.put(i,p.getPackageName());
+            }
+        }
     }
 
 
@@ -67,11 +87,13 @@ public class AppListRecyclerAdapter extends RecyclerView.Adapter<AppListRecycler
         }finally {
             holder.imageView.setImageDrawable(drawable);
         }
+
         holder.textView.setText(usageStats.getPackageName());
         holder.aSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 arr[position]=isChecked;
+                Log.d(TAG,position+  " ischecked "+arr[position]);
                 if(arr[position])
                     selectedRef.put(position,usageStats.getPackageName());
                 else
@@ -99,7 +121,19 @@ public class AppListRecyclerAdapter extends RecyclerView.Adapter<AppListRecycler
 
     }
     public HashMap<Integer, String> getSelectedRef(){
+        if(indices!=null  && areAllStillTrue() && selectedRef.size()==indices.size())
+            return null;
         return this.selectedRef;
+    }
+    private boolean areAllStillTrue(){
+        int i=0;
+        Log.d(TAG,"looping");
+        while(i< indices.size() && arr[indices.get(i)]) {
+            Log.d(TAG, i + " isChecked " + arr[i]);
+            i++;
+        }
+        Log.d(TAG,"final i "+i);
+        return i==indices.size();
     }
 
 
