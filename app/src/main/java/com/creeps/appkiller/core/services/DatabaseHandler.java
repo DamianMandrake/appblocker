@@ -40,6 +40,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private final static String CREATE_PROFILE_PACKAGE="CREATE TABLE "+TABLE_PKG+" ("+ ProfilePackages.PACKAGE_ID+" INTEGER PRIMARY KEY AUTOINCREMENT, "+
             ProfilePackages.PACKAGE_PROFILE_ID+" INTEGER , "+ProfilePackages.PACKAGE_NAME+" TEXT ,"+ProfilePackages.PACKAGE_OPEN_COUNT+" INTEGER );";
 
+
+
     private static DatabaseHandler ref;
     /* TODO add a predefined profile to the database */
 
@@ -68,6 +70,11 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         Log.d(TAG,"inOncreated b");
         db.execSQL(CREATE_PROFILES_TABLE);
         db.execSQL(CREATE_PROFILE_PACKAGE);
+        String q="INSERT INTO "+TABLE_PROFILES+" ("+Profile.PNAME_KEY+","+Profile.ST_KEY+","+Profile.ET_KEY+","+Profile.DAYS_BITMASK_KEY+") VALUES (\'BASE\',00,86340,127)";
+        String query="INSERT INTO "+TABLE_PKG+" ("+ProfilePackages.PACKAGE_PROFILE_ID+","+ProfilePackages.PACKAGE_NAME+","+ProfilePackages.PACKAGE_OPEN_COUNT+") VALUES (1,\'com.google.android.youtube\',0) , " +
+                "(1,\'com.whatsapp\',0)";
+        db.execSQL(q);
+        db.execSQL(query);
 
     }
 

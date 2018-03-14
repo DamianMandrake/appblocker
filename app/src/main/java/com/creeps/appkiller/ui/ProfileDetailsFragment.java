@@ -1,15 +1,9 @@
 package com.creeps.appkiller.ui;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.TimePickerDialog;
-import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
-import android.support.v7.widget.CardView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -26,9 +20,6 @@ import com.creeps.appkiller.MainActivity;
 import com.creeps.appkiller.R;
 import com.creeps.appkiller.core.services.DatabaseHandler;
 import com.creeps.appkiller.core.services.model.Profile;
-import com.creeps.appkiller.core.services.model.Week;
-
-import org.w3c.dom.Text;
 
 /**
  * Created by rohan on 3/13/18.
@@ -96,7 +87,7 @@ public class ProfileDetailsFragment extends Fragment {
     /*@Override
     public Dialog onCreateDialog(Bundle savedInstance){
         LayoutInflater inflater=LayoutInflater.from(baseActivity.getApplicationContext());
-        View view=inflater.inflate(R.layout.popup_time_day_profile,null);
+        View view=inflater.inflate(R.layout.fragment_profile_details,null);
 
 
         
@@ -123,7 +114,7 @@ public class ProfileDetailsFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view=inflater.inflate(R.layout.popup_time_day_profile,container,false);
+        View view=inflater.inflate(R.layout.fragment_profile_details,container,false);
         starTimeHolder=view.findViewById(R.id.start_placeholder);
         profileStartTime=profile.getStartTime();profileEndTime=profile.getEndTime();
         final HoursMinutesHolder hoursMinutesHolderStart=secondsToMinutes(profileStartTime),endHolder=secondsToMinutes(profileEndTime);
@@ -186,7 +177,11 @@ public class ProfileDetailsFragment extends Fragment {
             }
         });
         this.daysRecycler=view.findViewById(R.id.days_of_week_recycler);
-
+        WeekAdapter we=new WeekAdapter(baseActivity,profile.getDaysActive(),profile.getId());
+        mgr=new LinearLayoutManager(this.getContext());
+        mgr.setOrientation(LinearLayoutManager.HORIZONTAL);
+        this.daysRecycler.setLayoutManager(mgr);
+        this.daysRecycler.setAdapter(we);
 
 
 

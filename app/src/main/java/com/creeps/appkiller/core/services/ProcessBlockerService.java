@@ -15,6 +15,7 @@ import com.creeps.appkiller.BlockedAppActivity;
 import com.creeps.appkiller.core.MyBroadcastReceiver;
 import com.creeps.appkiller.core.NotificationHandler;
 import com.creeps.appkiller.core.services.model.Profile;
+import com.creeps.appkiller.core.services.model.Week;
 import com.creeps.appkiller.core.services.thread.ProcessLister;
 import com.creeps.appkiller.core.services.thread.ProcessListerCallback;
 
@@ -110,8 +111,9 @@ public class ProcessBlockerService extends Service implements ProcessListerCallb
         Log.d(TAG,"received "+currentPackageName);
         if(currentlyActiveProfile!=null)            Log.d(TAG,"PROFILE "+currentlyActiveProfile.toString());
         calendar=Calendar.getInstance();
-        long currentTime= calendar.get(Calendar.HOUR_OF_DAY) *3600 + calendar.get(Calendar.MINUTE)*60;
-        if(currentlyActiveProfile!=null && currentlyActiveProfile.contains(currentPackageName) && currentlyActiveProfile.shouldBlock(currentTime)){
+        long currentTime= calendar.get(Calendar.HOUR_OF_DAY) *3600 + calendar.get(Calendar.MINUTE)*60;byte currentDay= Week.allBitmasks[calendar.get(Calendar.DAY_OF_WEEK)-1];
+        Log.d(TAG,"isDayActive "+currentlyActiveProfile.getDaysActive().isDayActive(currentDay));
+        if(currentlyActiveProfile!=null && currentlyActiveProfile.contains(currentPackageName) && currentlyActiveProfile.shouldBlock(currentTime) && currentlyActiveProfile.getDaysActive().isDayActive(currentDay)){
             Intent blockeActivityIntent=new Intent(this, BlockedAppActivity.class);
                     blockeActivityIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
 

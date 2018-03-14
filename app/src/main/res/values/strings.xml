@@ -6,4 +6,7 @@
     <string name="start_time">Start Time:</string>
     <string name="end_time">End Time:</string>
     <string name="confirm_changes">confirm Changes</string>
+    <string name="days_active">Days Active</string>
+    <string name="timing">Timing</string>
+    <string name="apps_list">Apps List</string>
 </resources>
